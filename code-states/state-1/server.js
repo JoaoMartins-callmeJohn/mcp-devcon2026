@@ -31,9 +31,7 @@ function createServer() {
       description: "Returns a greeting in the chosen language",
       inputSchema: {
         name: z.string().describe("Name of the person to greet"),
-        language: z
-          .enum(["english", "french", "spanish"])
-          .describe("Language for the greeting"),
+        language: z.enum(["english", "french", "spanish"]).describe("Language"),
       },
     },
     async ({ name, language }) => {
@@ -48,6 +46,8 @@ function createServer() {
 
   return server;
 }
+
+const PORT = 3000;
 
 const httpServer = http.createServer(async (req, res) => {
   if (req.url !== "/mcp") {
@@ -65,6 +65,6 @@ const httpServer = http.createServer(async (req, res) => {
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3000, () => {
-  console.log("MCP server running at http://localhost:3000/mcp");
+httpServer.listen(PORT, () => {
+  console.log(`MCP server running at http://localhost:${PORT}/mcp`);
 });

@@ -1,17 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 import http from "node:http";
-import path from "node:path";
-
-// Downstream client — connect to the filesystem server at startup
-const fsClient = new Client({ name: "devcon-fs-bridge", version: "1.0.0" });
-await fsClient.connect(
-  new StreamableHTTPClientTransport(new URL("http://localhost:3001/mcp")),
-);
-console.log("Connected to filesystem MCP server at :3001");
 
 function createServer() {
   const server = new McpServer({
@@ -41,9 +31,7 @@ function createServer() {
       description: "Returns a greeting in the chosen language",
       inputSchema: {
         name: z.string().describe("Name of the person to greet"),
-        language: z
-          .enum(["english", "french", "spanish"])
-          .describe("Language for the greeting"),
+        language: z.enum(["english", "french", "spanish"]).describe("Language"),
       },
     },
     async ({ name, language }) => {
@@ -56,29 +44,7 @@ function createServer() {
     },
   );
 
-  // Tool 3: bim_element
-  server.registerTool(
-    "bim_element",
-    {
-      description: "Returns a formatted summary of a BIM element",
-      inputSchema: {
-        id: z.string().describe("Element ID, e.g. W-001"),
-        type: z.string().describe("Element type, e.g. Wall"),
-        material: z.string().describe("Material, e.g. Concrete"),
-        level: z.string().describe("Level, e.g. L1"),
-      },
-    },
-    async ({ id, type, material, level }) => ({
-      content: [
-        {
-          type: "text",
-          text: `[${id}] ${type} | Material: ${material} | Level: ${level}`,
-        },
-      ],
-    }),
-  );
-
-  // Tool 4: get_weather
+  // Tool 3: get_weather
   server.registerTool(
     "get_weather",
     {
@@ -109,55 +75,10 @@ function createServer() {
     },
   );
 
-  // Tool 5: list_project_files (delegates to fs-server via MCP chaining)
-  server.registerTool(
-    "list_project_files",
-    {
-      description: "Lists all files in the workshop project folder",
-      inputSchema: {
-        path: z
-          .string()
-          .optional()
-          .describe("Relative path within the project (optional)"),
-      },
-    },
-    async ({ path: relativePath }) => {
-      const targetPath = relativePath
-        ? path.join(process.cwd(), relativePath)
-        : process.cwd();
-      const result = await fsClient.callTool({
-        name: "list_directory",
-        arguments: { path: targetPath },
-      });
-      const entries = JSON.parse(result.content[0].text);
-      const lines = entries.map((e) => `[${e.type.toUpperCase()}] ${e.name}`);
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    },
-  );
-
-  // Tool 6: read_file (Challenge A solution — delegates to fs-server)
-  server.registerTool(
-    "read_file",
-    {
-      description: "Returns the text content of a file at the given path",
-      inputSchema: {
-        path: z.string().describe("Relative or absolute path to the file"),
-      },
-    },
-    async ({ path: filePath }) => {
-      const absolutePath = path.isAbsolute(filePath)
-        ? filePath
-        : path.join(process.cwd(), filePath);
-      const result = await fsClient.callTool({
-        name: "read_file",
-        arguments: { path: absolutePath },
-      });
-      return result;
-    },
-  );
-
   return server;
 }
+
+const PORT = 3000;
 
 const httpServer = http.createServer(async (req, res) => {
   if (req.url !== "/mcp") {
@@ -175,6 +96,6 @@ const httpServer = http.createServer(async (req, res) => {
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3000, () => {
-  console.log("Main MCP server running at http://localhost:3000/mcp");
+httpServer.listen(PORT, () => {
+  console.log(`MCP server running at http://localhost:${PORT}/mcp`);
 });

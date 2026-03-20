@@ -31,7 +31,7 @@ Open `package.json` and set `"type": "module"`:
 
 > **Why?** The MCP SDK uses ES module syntax (`import`/`export`). Without this flag Node.js will reject it.
 
-> **Already have a `"type"` field?** If your `package.json` already contains `"type": "commonjs"` or any other value, replace that line with `"type": "module"` — don't add a second `"type"` entry.
+> **Already have a `"type"` field?** If your `package.json` already contains `"type": "commonjs"` or any other value, replace that line with `"type": "module"`, don't add a second `"type"` entry.
 
 ### Step 4 - Install dependencies
 
@@ -55,7 +55,7 @@ devcon-workshop/
 
 ## Part 2 - Build the MCP Server
 
-We start by creating the server. The server is the core of an MCP system — it is responsible for exposing the tools that clients can call, receiving incoming requests, executing the right tool handler, and sending the response back. Everything flows through it.
+We start by creating the server. The server is the core of an MCP system. It is responsible for exposing the tools that clients can call, receiving incoming requests, executing the right tool handler, and sending the response back. Everything flows through it.
 
 Create a new file called `server.js` in your project folder.
 
@@ -105,8 +105,8 @@ function createServer() {
 
 We'll register two tools to demonstrate the pattern:
 
-- **`add`** — takes two numbers (`a` and `b`) and returns their sum. A minimal example that shows the basic structure without any business logic in the way.
-- **`greet`** — takes a `name` and a `language` (`english`, `french`, or `spanish`) and returns a personalised greeting in the chosen language. Demonstrates how to use `z.enum()` to constrain a string input to a fixed set of allowed values.
+- **`add`**: takes two numbers (`a` and `b`) and returns their sum. A minimal example that shows the basic structure without any business logic in the way.
+- **`greet`**: takes a `name` and a `language` (`english`, `french`, or `spanish`) and returns a personalised greeting in the chosen language. Demonstrates how to use `z.enum()` to constrain a string input to a fixed set of allowed values.
 
 ```javascript
 // Tool 1: add two numbers
@@ -182,13 +182,13 @@ httpServer.listen(PORT, () => {
 - `sessionIdGenerator: undefined` - sets the server to stateless mode. Each request is self-contained.
 - A fresh `StreamableHTTPServerTransport` is created per request.
 - `res.on("close", () => transport.close())` ensures the transport is cleaned up when the HTTP connection closes.
-- `transport.handleRequest(req, res)` does all MCP message parsing, routing, and response writing — no manual body parsing needed.
+- `transport.handleRequest(req, res)` does all MCP message parsing, routing, and response writing, no manual body parsing needed.
 
 [View complete `server.js` in Source Code →](/code-states#state-1:server.js)
 
 ## Part 3 - Connect VS Code as Your MCP Host
 
-VS Code with GitHub Copilot can act as an MCP host — it connects to your running server, discovers its tools, and lets you call them through natural language. All you need to do is tell VS Code where to find the server.
+VS Code with GitHub Copilot can act as an MCP host It connects to your running server, discovers its tools, and lets you call them through natural language. All you need to do is tell VS Code where to find the server.
 
 Create a `.vscode` folder in your project and add `mcp.json`:
 
@@ -213,12 +213,12 @@ devcon-workshop/
 }
 ```
 
-| Field             | What it does                                                                                          |
-| ----------------- | ----------------------------------------------------------------------------------------------------- |
-| `servers`         | A map of named MCP servers VS Code should know about                                                  |
-| `devcon-workshop` | The display name shown in VS Code's MCP server list                                                   |
-| `type: http`      | Tells VS Code to connect over HTTP — it will **not** launch the server for you; you start it yourself |
-| `url`             | The endpoint VS Code sends MCP requests to — must match where your server is listening                |
+| Field             | What it does                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `servers`         | A map of named MCP servers VS Code should know about                                  |
+| `devcon-workshop` | The display name shown in VS Code's MCP server list                                   |
+| `type: http`      | Tells VS Code to connect over HTTP                                                    |
+| `url`             | The endpoint VS Code sends MCP requests to, must match where your server is listening |
 
 ## Part 4 - Run It
 
@@ -236,11 +236,11 @@ MCP server running at http://localhost:3000/mcp
 
 ### Step 2 - Connect VS Code
 
-Open the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on Mac, or **View → Command Palette**) and run **MCP: List Servers**. You should see `devcon-workshop` listed with a **Start** button. Click it — VS Code will connect to your running server.
+Open the Command Palette (`Ctrl+Shift+P` on Windows/Linux, `Cmd+Shift+P` on Mac, or **View → Command Palette**) and run **MCP: List Servers**. You should see `devcon-workshop` listed with a **Start** button. Click it, VS Code will connect to your running server.
 
 ### Step 3 - Verify tool calls through Copilot Chat
 
-Open Copilot Chat (`Ctrl+Alt+I` on Windows/Linux, `Cmd+Ctrl+I` on Mac, or click the **Copilot icon** in the Activity Bar) and switch to **Agent** mode by clicking the mode selector next to the model name. MCP tools are only available in Agent mode — the other modes don't support external tool calls.
+Open Copilot Chat (`Ctrl+Alt+I` on Windows/Linux, `Cmd+Ctrl+I` on Mac, or click the **Copilot icon** in the Activity Bar) and switch to **Agent** mode by clicking the mode selector next to the model name. MCP tools are only available in Agent mode, the other modes don't support external tool calls.
 
 To reference your MCP tools explicitly, use the `#` prefix:
 
@@ -248,7 +248,7 @@ To reference your MCP tools explicitly, use the `#` prefix:
 
 > "Use `#greet` to greet Nabil in Spanish"
 
-You will see a **tool call indicator** appear in the chat — Copilot shows which tool it invoked and the result before writing its final answer. That confirms your server is live and the MCP connection is working.
+You will see a **tool call indicator** appear in the chat. Copilot shows which tool it invoked and the result before writing its final answer. That confirms your server is live and the MCP connection is working.
 
 ## Challenge
 

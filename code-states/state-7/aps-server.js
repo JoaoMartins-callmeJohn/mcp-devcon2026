@@ -19,7 +19,7 @@ if (!APS_USER_CLIENT_ID || !APS_USER_CLIENT_SECRET) {
   );
 }
 
-const REDIRECT_URI = "http://localhost:3002/auth/callback";
+const REDIRECT_URI = "http://localhost:3001/auth/callback";
 
 // User access token — null until the user completes the 3-legged login
 let userAccessToken = null;
@@ -70,8 +70,15 @@ function createServer() {
       const data = await oss.getBuckets({ region });
       const items = data.items ?? [];
       if (items.length === 0)
-        return { content: [{ type: "text", text: "No buckets found." }] };
-      const lines = items.map((b) => `${b.bucketKey} (${b.policyKey})`);
+        return {
+          content: [
+            { type: "text", text: "No buckets found. Create one first." },
+          ],
+        };
+      const lines = items.map(
+        (b) =>
+          `${b.bucketKey} (${b.policyKey}, created: ${new Date(b.createdDate).toLocaleDateString()})`,
+      );
       return { content: [{ type: "text", text: lines.join("\n") }] };
     },
   );
@@ -125,7 +132,7 @@ function createServer() {
     {
       description:
         "Returns the Autodesk profile of the currently logged-in user. " +
-        "The user must first authenticate by visiting http://localhost:3002/auth/login in their browser.",
+        "The user must first authenticate by visiting http://localhost:3001/auth/login in their browser.",
     },
     async () => {
       if (!userAccessToken) {
@@ -133,7 +140,7 @@ function createServer() {
           content: [
             {
               type: "text",
-              text: "Not authenticated. Ask the user to open http://localhost:3002/auth/login in their browser to log in with Autodesk.",
+              text: "Not authenticated. Ask the user to open http://localhost:3001/auth/login in their browser to log in with Autodesk.",
             },
           ],
         };
@@ -167,7 +174,7 @@ function createServer() {
   return server;
 }
 
-// Create HTTP server and start on port 3002
+// Create HTTP server and start on port 3001
 const httpServer = http.createServer(async (req, res) => {
   // Route 1: kick off 3-legged login
   if (req.url === "/auth/login") {
@@ -186,7 +193,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   // Route 2: receive the OAuth callback, exchange the code for a user token
   if (req.url?.startsWith("/auth/callback")) {
-    const url = new URL(req.url, "http://localhost:3002");
+    const url = new URL(req.url, "http://localhost:3001");
     const code = url.searchParams.get("code");
 
     if (!code) {
@@ -241,7 +248,7 @@ const httpServer = http.createServer(async (req, res) => {
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3002, () => {
-  console.log("APS MCP server running at http://localhost:3002/mcp");
-  console.log("Login at http://localhost:3002/auth/login");
+httpServer.listen(3001, () => {
+  console.log("APS MCP server running at http://localhost:3001/mcp");
+  console.log("Login at http://localhost:3001/auth/login");
 });

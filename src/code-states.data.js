@@ -26,36 +26,29 @@ const STATE_META = [
   },
   {
     id: "state-4",
-    label: "2 - FS list directory",
+    label: "3 - Autodesk APS (2-legged)",
     description:
-      "Adds fs-server with list_directory + list_project_files on main server",
-    chapter: "2",
-  },
-  {
-    id: "state-5",
-    label: "2 - FS read file (challenge solution)",
-    description:
-      "Challenge solution: adds read_file tool delegating to fs-server, connected via VS Code",
-    chapter: "2",
-  },
-  {
-    id: "state-6",
-    label: "3 - Autodesk APS (full system)",
-    description:
-      "Full system: main server + fs-server + aps-server (OSS: list + create buckets)",
+      "server.js (weather) + standalone aps-server (OSS: list + create buckets), both in mcp.json",
     chapter: "3",
   },
   {
-    id: "state-7",
+    id: "state-5",
     label: "4 - User Authentication with APS (3-legged)",
     description:
-      "aps-server with OSS tools + 3-legged OAuth routes + get_user_info; server.js with aps_get_user_info",
-    chapter: "0",
+      "aps-server with OSS tools + 3-legged OAuth routes + get_user_info, connected directly via mcp.json",
+    chapter: "4",
   },
   {
-    id: "state-8",
+    id: "state-6",
     label: "5 - Advanced (client.js + agent.js)",
     description: "client.js calling all workshop tools + Gemini agent.js",
+    chapter: "5",
+  },
+  {
+    id: "state-7",
+    label: "5 - Challenges (system prompt + REPL)",
+    description:
+      "agent.js with system prompt for AEC professionals and interactive REPL loop",
     chapter: "5",
   },
 ];

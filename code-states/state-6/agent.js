@@ -3,21 +3,37 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import "dotenv/config";
 
-// --- Connect to MCP server ---
-const mcpClient = new Client({ name: "devcon-agent", version: "1.0.0" });
-
-await mcpClient.connect(
+// --- Connect to both MCP servers ---
+const workshopClient = new Client({
+  name: "devcon-agent-workshop",
+  version: "1.0.0",
+});
+await workshopClient.connect(
   new StreamableHTTPClientTransport(new URL("http://localhost:3000/mcp")),
 );
 
-const { tools } = await mcpClient.listTools();
-console.log(`Connected. ${tools.length} tools available:`);
-tools.forEach((t) => console.log(`  - ${t.name}: ${t.description}`));
+const apsClient = new Client({ name: "devcon-agent-aps", version: "1.0.0" });
+await apsClient.connect(
+  new StreamableHTTPClientTransport(new URL("http://localhost:3001/mcp")),
+);
+
+// Merge tools from both servers
+const { tools: workshopTools } = await workshopClient.listTools();
+const { tools: apsTools } = await apsClient.listTools();
+const allTools = [...workshopTools, ...apsTools];
+
+// Build a lookup map: tool name → MCP client
+const toolClientMap = {};
+workshopTools.forEach((t) => (toolClientMap[t.name] = workshopClient));
+apsTools.forEach((t) => (toolClientMap[t.name] = apsClient));
+
+console.log(`Connected. ${allTools.length} tools available:`);
+allTools.forEach((t) => console.log(`  - ${t.name}: ${t.description}`));
 
 // --- Convert MCP tools to Gemini function declarations ---
 const geminiTools = [
   {
-    functionDeclarations: tools.map((tool) => ({
+    functionDeclarations: allTools.map((tool) => ({
       name: tool.name,
       description: tool.description,
       parameters: tool.inputSchema,
@@ -56,9 +72,12 @@ async function ask(userPrompt) {
       const { name, args } = part.functionCall;
       console.log(`  → Calling tool: ${name}(${JSON.stringify(args)})`);
 
-      const result = await mcpClient.callTool({ name, arguments: args });
+      const result = await toolClientMap[name].callTool({
+        name,
+        arguments: args,
+      });
       const resultText = result.content.map((c) => c.text || "").join("\n");
-      console.log(`  ← Result: ${resultText.slice(0, 120)}`);
+      console.log(`  ← Result: ${resultText.slice(0, 120)}...`);
 
       toolResults.push({
         functionResponse: {
@@ -73,7 +92,10 @@ async function ask(userPrompt) {
   }
 }
 
-await ask("What files are in the project directory?");
 await ask("What is the weather like in London?");
+await ask(
+  "Create a new OSS bucket called 'devcon-test' with a persistent policy in the US region, then list my US buckets to confirm it was created.",
+);
 
-await mcpClient.close();
+await workshopClient.close();
+await apsClient.close();

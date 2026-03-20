@@ -13,6 +13,10 @@ hero:
       text: Download Slides
       link: ./MCP_Devcon%2014-04-2026.pdf
       target: _blank
+    - theme: alt
+      text: YouTube Playlist (Coming Soon)
+      link: "#"
+      target: _blank
 
 features:
   - title: "Prerequisites"

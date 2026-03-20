@@ -40,6 +40,9 @@ jobs:
       - name: Build VitePress site
         run: npm run build
 
+      - name: Verify VitePress output
+        run: test -f .vitepress/dist/index.html
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:

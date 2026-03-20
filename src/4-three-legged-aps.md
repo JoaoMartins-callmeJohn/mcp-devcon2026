@@ -2,7 +2,7 @@
 
 _Accessing Autodesk Data as a Specific User_
 
-Chapter 3 authenticated as your _application_. Every API call used an app-level token — your server saw what the application was provisioned to see. **3-legged authentication** puts the user into the flow: the user logs in with their Autodesk account, and API calls are made on their behalf with their own permissions.
+[Chapter 3](./3-connecting-autodesk-aps.md) authenticated as your _application_. Every API call used an app-level token. Your server saw what the application was provisioned to see. **3-legged authentication** puts the user into the flow: the user logs in with their Autodesk account, and API calls are made on their behalf with their own permissions.
 
 ## 2-Legged vs 3-Legged
 
@@ -27,7 +27,7 @@ Once the token is stored, any MCP tool can use it to call the Autodesk API as th
 
 ## Part 1 – Create a New APS Application
 
-In Chapter 3 you created a **Server-to-Server** application. That app type is designed for machine-to-machine calls — it has no concept of a user login and **cannot perform 3-legged OAuth**. You need a second application of a different type.
+In [Chapter 3](./3-connecting-autodesk-aps.md) you created a **Server-to-Server** application. That app type is designed for machine-to-machine calls. It has no concept of a user login and **cannot perform 3-legged OAuth**. You need a second application of a different type.
 
 ### 1. Open your Developer Hub
 
@@ -51,7 +51,7 @@ Click **Create**.
 Inside your new application, go to **General Settings** and find **Callback URLs**. Add:
 
 ```
-http://localhost:3002/auth/callback
+http://localhost:3001/auth/callback
 ```
 
 Click **Save changes**.
@@ -90,9 +90,9 @@ if (!APS_USER_CLIENT_ID || !APS_USER_CLIENT_SECRET) {
   );
 }
 
-const REDIRECT_URI = "http://localhost:3002/auth/callback";
+const REDIRECT_URI = "http://localhost:3001/auth/callback";
 
-// User access token — null until the user completes the 3-legged login
+// User access token - null until the user completes the 3-legged login
 let userAccessToken = null;
 ```
 
@@ -100,7 +100,7 @@ let userAccessToken = null;
 
 We add one new tool:
 
-- **`get_user_info`** — returns the Autodesk profile (name, email, and Autodesk ID) of the currently logged-in user. If no user has completed the OAuth flow yet, it returns a message telling the user to open the login URL in their browser.
+- **`get_user_info`**: returns the Autodesk profile (name, email, and Autodesk ID) of the currently logged-in user. If no user has completed the OAuth flow yet, it returns a message telling the user to open the login URL in their browser.
 
 Inside `createServer()`, after the existing tools, register the user profile tool:
 
@@ -110,7 +110,7 @@ server.registerTool(
   {
     description:
       "Returns the Autodesk profile of the currently logged-in user. " +
-      "The user must first authenticate by visiting http://localhost:3002/auth/login in their browser.",
+      "The user must first authenticate by visiting http://localhost:3001/auth/login in their browser.",
   },
   async () => {
     if (!userAccessToken) {
@@ -118,7 +118,7 @@ server.registerTool(
         content: [
           {
             type: "text",
-            text: "Not authenticated. Ask the user to open http://localhost:3002/auth/login in their browser to log in with Autodesk.",
+            text: "Not authenticated. Ask the user to open http://localhost:3001/auth/login in their browser to log in with Autodesk.",
           },
         ],
       };
@@ -154,9 +154,9 @@ server.registerTool(
 
 The updated server handles three routes:
 
-- **`/auth/login`** — redirects the user's browser to Autodesk's OAuth authorisation page, passing the client ID, callback URL, and requested scopes.
-- **`/auth/callback`** — receives the short-lived authorisation code from Autodesk after the user logs in, exchanges it for a user access token, and stores it in `userAccessToken`.
-- **`/mcp`** — the existing MCP endpoint, unchanged.
+- **`/auth/login`**: redirects the user's browser to Autodesk's OAuth authorisation page, passing the client ID, callback URL, and requested scopes.
+- **`/auth/callback`**: receives the short-lived authorisation code from Autodesk after the user logs in, exchanges it for a user access token, and stores it in `userAccessToken`.
+- **`/mcp`**: the existing MCP endpoint, unchanged.
 
 Replace the existing `http.createServer(...)` block with this version that handles all three:
 
@@ -179,7 +179,7 @@ const httpServer = http.createServer(async (req, res) => {
 
   // Route 2: receive the OAuth callback, exchange the code for a user token
   if (req.url?.startsWith("/auth/callback")) {
-    const url = new URL(req.url, "http://localhost:3002");
+    const url = new URL(req.url, "http://localhost:3001");
     const code = url.searchParams.get("code");
 
     if (!code) {
@@ -234,53 +234,23 @@ const httpServer = http.createServer(async (req, res) => {
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3002, () => {
-  console.log("APS MCP server running at http://localhost:3002/mcp");
-  console.log("Login at http://localhost:3002/auth/login");
+httpServer.listen(3001, () => {
+  console.log("APS MCP server running at http://localhost:3001/mcp");
+  console.log("Login at http://localhost:3001/auth/login");
 });
 ```
 
-[View complete `aps-server.js` in Source Code →](/code-states#state-7:aps-server.js)
+[View complete `aps-server.js` in Source Code →](/code-states#state-5:aps-server.js)
 
-## Part 3 – Wire into server.js
-
-We add one delegating tool:
-
-- **`aps_get_user_info`** — proxies `get_user_info` on `aps-server.js`; returns the Autodesk profile of the currently authenticated user, or a login prompt if no user has signed in yet.
-
-In `server.js`, add the delegating tool to surface it through the main server:
-
-```javascript
-server.registerTool(
-  "aps_get_user_info",
-  {
-    description:
-      "Returns the Autodesk profile of the currently authenticated user. Returns a login URL if not yet authenticated.",
-  },
-  async () => {
-    const result = await apsClient.callTool({
-      name: "get_user_info",
-      arguments: {},
-    });
-    return { content: result.content };
-  },
-);
-```
-
-[View complete `server.js` in Source Code →](/code-states#state-7:server.js)
-
-## Part 4 – Log In and Test
+## Part 3 – Log In and Test
 
 ### Start the servers
 
 ```bash
-# Terminal 1 — filesystem server
-node fs-server.js
-
-# Terminal 2 — APS server (now also handles OAuth routes)
+# Terminal 1 - APS server (now also handles OAuth routes)
 node aps-server.js
 
-# Terminal 3 — main server
+# Terminal 2 - workshop server
 node server.js
 ```
 
@@ -289,7 +259,7 @@ node server.js
 Open a browser and go to:
 
 ```
-http://localhost:3002/auth/login
+http://localhost:3001/auth/login
 ```
 
 You are redirected to the Autodesk login page. Sign in with your Autodesk account. After a successful login, Autodesk calls your callback URL, your server exchanges the code for a user token, and the browser shows:
@@ -306,9 +276,9 @@ User authenticated via 3-legged OAuth.
 
 Run **MCP: List Servers → Restart** in the Command Palette. Then open Copilot Chat in **Agent** mode and ask:
 
-> "Use `#aps_get_user_info` to show my Autodesk profile."
+> "Use `#get_user_info` to show my Autodesk profile."
 
-Copilot calls `aps_get_user_info` on `server.js` → which forwards to `get_user_info` on `aps-server.js` → which fetches the Autodesk `/userinfo` endpoint with the stored user token.
+Copilot calls `get_user_info` on `aps-server.js` directly, which fetches the Autodesk `/userinfo` endpoint with the stored user token.
 
 Expected output:
 
@@ -322,6 +292,6 @@ Autodesk ID: AAAAAAAABBBBBBBB0000000
 
 The global `userAccessToken` variable works fine for a single-user workshop. A production system needs:
 
-- **Session-scoped tokens** — store the token keyed by a session ID rather than a global variable, so each user has their own token
-- **Token refresh** — the access token expires after 1 hour; use the `refresh_token` returned alongside it to request a new one without forcing a re-login
-- **HTTPS callback URL** — Autodesk requires HTTPS for production callback URLs (`https://yourdomain.com/auth/callback`)
+- **Session-scoped tokens**: store the token keyed by a session ID rather than a global variable, so each user has their own token
+- **Token refresh**: the access token expires after 1 hour; use the `refresh_token` returned alongside it to request a new one without forcing a re-login
+- **HTTPS callback URL**: Autodesk requires HTTPS for production callback URLs (`https://yourdomain.com/auth/callback`)

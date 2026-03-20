@@ -12,18 +12,6 @@ if (!APS_CLIENT_ID || !APS_CLIENT_SECRET) {
   throw new Error("Missing APS_CLIENT_ID or APS_CLIENT_SECRET in environment.");
 }
 
-const { APS_USER_CLIENT_ID, APS_USER_CLIENT_SECRET } = process.env;
-if (!APS_USER_CLIENT_ID || !APS_USER_CLIENT_SECRET) {
-  throw new Error(
-    "Missing APS_USER_CLIENT_ID or APS_USER_CLIENT_SECRET in environment.",
-  );
-}
-
-const REDIRECT_URI = "http://localhost:3001/auth/callback";
-
-// User access token — null until the user completes the 3-legged login
-let userAccessToken = null;
-
 // --- Auth: 2-legged token with auto-refresh ---
 const authClient = new AuthenticationClient();
 let cachedToken = null;
@@ -126,119 +114,15 @@ function createServer() {
     },
   );
 
-  // Tool 3: get_user_info
-  server.registerTool(
-    "get_user_info",
-    {
-      description:
-        "Returns the Autodesk profile of the currently logged-in user. " +
-        "The user must first authenticate by visiting http://localhost:3001/auth/login in their browser.",
-    },
-    async () => {
-      if (!userAccessToken) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: "Not authenticated. Ask the user to open http://localhost:3001/auth/login in their browser to log in with Autodesk.",
-            },
-          ],
-        };
-      }
-
-      const response = await fetch(
-        "https://api.userprofile.autodesk.com/userinfo",
-        {
-          headers: { Authorization: `Bearer ${userAccessToken}` },
-        },
-      );
-
-      if (!response.ok) {
-        return {
-          content: [{ type: "text", text: `Error: ${response.status}` }],
-        };
-      }
-
-      const user = await response.json();
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Name: ${user.name}\nEmail: ${user.email}\nAutodesk ID: ${user.sub}`,
-          },
-        ],
-      };
-    },
-  );
-
   return server;
 }
 
 // Create HTTP server and start on port 3001
 const httpServer = http.createServer(async (req, res) => {
-  // Route 1: kick off 3-legged login
-  if (req.url === "/auth/login") {
-    const params = new URLSearchParams({
-      response_type: "code",
-      client_id: APS_USER_CLIENT_ID,
-      redirect_uri: REDIRECT_URI,
-      scope: "data:read",
-    });
-    res.writeHead(302, {
-      Location: `https://developer.api.autodesk.com/authentication/v2/authorize?${params}`,
-    });
-    res.end();
-    return;
-  }
-
-  // Route 2: receive the OAuth callback, exchange the code for a user token
-  if (req.url?.startsWith("/auth/callback")) {
-    const url = new URL(req.url, "http://localhost:3001");
-    const code = url.searchParams.get("code");
-
-    if (!code) {
-      res.writeHead(400).end("Missing authorization code.");
-      return;
-    }
-
-    const tokenRes = await fetch(
-      "https://developer.api.autodesk.com/authentication/v2/token",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          client_id: APS_USER_CLIENT_ID,
-          client_secret: APS_USER_CLIENT_SECRET,
-          redirect_uri: REDIRECT_URI,
-        }),
-      },
-    );
-
-    if (!tokenRes.ok) {
-      res.writeHead(500).end(`Token exchange failed: ${tokenRes.status}`);
-      return;
-    }
-
-    const tokenData = await tokenRes.json();
-    userAccessToken = tokenData.access_token;
-    console.log("User authenticated via 3-legged OAuth.");
-
-    res
-      .writeHead(200, { "Content-Type": "text/html" })
-      .end(
-        "<h1>Login successful!</h1><p>Close this tab and return to VS Code.</p>",
-      );
-    return;
-  }
-
-  // Route 3: MCP endpoint
   if (req.url !== "/mcp") {
     res.writeHead(404).end("Not found");
     return;
   }
-
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
@@ -250,5 +134,4 @@ const httpServer = http.createServer(async (req, res) => {
 
 httpServer.listen(3001, () => {
   console.log("APS MCP server running at http://localhost:3001/mcp");
-  console.log("Login at http://localhost:3001/auth/login");
 });

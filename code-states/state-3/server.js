@@ -31,9 +31,7 @@ function createServer() {
       description: "Returns a greeting in the chosen language",
       inputSchema: {
         name: z.string().describe("Name of the person to greet"),
-        language: z
-          .enum(["english", "french", "spanish"])
-          .describe("Language for the greeting"),
+        language: z.enum(["english", "french", "spanish"]).describe("Language"),
       },
     },
     async ({ name, language }) => {
@@ -46,29 +44,7 @@ function createServer() {
     },
   );
 
-  // Tool 3: bim_element (Ch.01 challenge)
-  server.registerTool(
-    "bim_element",
-    {
-      description: "Returns a formatted summary of a BIM element",
-      inputSchema: {
-        id: z.string().describe("Element ID, e.g. W-001"),
-        type: z.string().describe("Element type, e.g. Wall"),
-        material: z.string().describe("Material, e.g. Concrete"),
-        level: z.string().describe("Level, e.g. L1"),
-      },
-    },
-    async ({ id, type, material, level }) => ({
-      content: [
-        {
-          type: "text",
-          text: `[${id}] ${type} | Material: ${material} | Level: ${level}`,
-        },
-      ],
-    }),
-  );
-
-  // Tool 4: get_weather
+  // Tool 3: get_weather
   server.registerTool(
     "get_weather",
     {
@@ -102,6 +78,8 @@ function createServer() {
   return server;
 }
 
+const PORT = 3000;
+
 const httpServer = http.createServer(async (req, res) => {
   if (req.url !== "/mcp") {
     res.writeHead(404).end("Not found");
@@ -118,6 +96,6 @@ const httpServer = http.createServer(async (req, res) => {
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3000, () => {
-  console.log("MCP server running at http://localhost:3000/mcp");
+httpServer.listen(PORT, () => {
+  console.log(`MCP server running at http://localhost:${PORT}/mcp`);
 });

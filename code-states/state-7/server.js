@@ -1,29 +1,12 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { z } from "zod";
 import http from "node:http";
-import path from "node:path";
 
-// Downstream clients — connect once at startup
-const fsClient = new Client({ name: "devcon-fs-bridge", version: "1.0.0" });
-await fsClient.connect(
-  new StreamableHTTPClientTransport(new URL("http://localhost:3001/mcp")),
-);
-console.log("Connected to filesystem MCP server at :3001");
-
-const apsClient = new Client({ name: "devcon-aps-bridge", version: "1.0.0" });
-await apsClient.connect(
-  new StreamableHTTPClientTransport(new URL("http://localhost:3002/mcp")),
-);
-console.log("Connected to APS MCP server at :3002");
-
-// Factory: fresh McpServer per request
 function createServer() {
   const server = new McpServer({
     name: "devcon-workshop-server",
-    version: "2.0.0",
+    version: "1.0.0",
   });
 
   // Tool 1: add
@@ -31,7 +14,10 @@ function createServer() {
     "add",
     {
       description: "Adds two numbers together",
-      inputSchema: { a: z.number(), b: z.number() },
+      inputSchema: {
+        a: z.number().describe("First number"),
+        b: z.number().describe("Second number"),
+      },
     },
     async ({ a, b }) => ({
       content: [{ type: "text", text: `Result: ${a + b}` }],
@@ -44,8 +30,8 @@ function createServer() {
     {
       description: "Returns a greeting in the chosen language",
       inputSchema: {
-        name: z.string(),
-        language: z.enum(["english", "french", "spanish"]),
+        name: z.string().describe("Name of the person to greet"),
+        language: z.enum(["english", "french", "spanish"]).describe("Language"),
       },
     },
     async ({ name, language }) => {
@@ -58,7 +44,29 @@ function createServer() {
     },
   );
 
-  // Tool 3: get_weather
+  // Tool 3: bim_element
+  server.registerTool(
+    "bim_element",
+    {
+      description: "Returns a formatted summary of a BIM element",
+      inputSchema: {
+        id: z.string().describe("Element ID, e.g. W-001"),
+        type: z.string().describe("Element type, e.g. Wall"),
+        material: z.string().describe("Material, e.g. Concrete"),
+        level: z.string().describe("Level, e.g. L1"),
+      },
+    },
+    async ({ id, type, material, level }) => ({
+      content: [
+        {
+          type: "text",
+          text: `[${id}] ${type} | Material: ${material} | Level: ${level}`,
+        },
+      ],
+    }),
+  );
+
+  // Tool 4: get_weather
   server.registerTool(
     "get_weather",
     {
@@ -89,122 +97,27 @@ function createServer() {
     },
   );
 
-  // Tool 4: list_project_files
-  server.registerTool(
-    "list_project_files",
-    {
-      description: "Lists all files in the workshop project folder",
-      inputSchema: {
-        path: z
-          .string()
-          .optional()
-          .describe("Relative path within the project (optional)"),
-      },
-    },
-    async ({ path: relativePath }) => {
-      const targetPath = relativePath
-        ? path.join(process.cwd(), relativePath)
-        : process.cwd();
-      const result = await fsClient.callTool({
-        name: "list_directory",
-        arguments: { path: targetPath },
-      });
-      const entries = JSON.parse(result.content[0].text);
-      const lines = entries.map((e) => `[${e.type.toUpperCase()}] ${e.name}`);
-      return { content: [{ type: "text", text: lines.join("\n") }] };
-    },
-  );
-
-  // Tool 5: aps_list_buckets
-  server.registerTool(
-    "aps_list_buckets",
-    {
-      description: "Lists all OSS storage buckets in the connected APS account",
-      inputSchema: {
-        region: z
-          .enum(["US", "EMEA", "AUS", "CAN", "DEU", "IND", "JPN", "GBR"])
-          .describe("Data center region to list buckets from"),
-      },
-    },
-    async ({ region }) => {
-      const result = await apsClient.callTool({
-        name: "list_buckets",
-        arguments: { region },
-      });
-      return { content: result.content };
-    },
-  );
-
-  // Tool 6: aps_create_bucket
-  server.registerTool(
-    "aps_create_bucket",
-    {
-      description:
-        "Creates a new OSS storage bucket in the connected APS account",
-      inputSchema: {
-        bucket_key: z
-          .string()
-          .describe("Unique key for the bucket (lowercase, numbers, dashes)"),
-        policy: z.enum(["transient", "temporary", "persistent"]),
-        region: z.enum([
-          "US",
-          "EMEA",
-          "AUS",
-          "CAN",
-          "DEU",
-          "IND",
-          "JPN",
-          "GBR",
-        ]),
-      },
-    },
-    async ({ bucket_key, policy, region }) => {
-      const result = await apsClient.callTool({
-        name: "create_bucket",
-        arguments: {
-          bucket_key,
-          policy,
-          region,
-        },
-      });
-      return { content: result.content };
-    },
-  );
-
-  // Tool 7: aps_get_user_info
-  server.registerTool(
-    "aps_get_user_info",
-    {
-      description:
-        "Returns the Autodesk profile of the currently authenticated user. Returns a login URL if not yet authenticated.",
-    },
-    async () => {
-      const result = await apsClient.callTool({
-        name: "get_user_info",
-        arguments: {},
-      });
-      return { content: result.content };
-    },
-  );
-
   return server;
 }
 
-// Create HTTP server and start on port 3000
+const PORT = 3000;
+
 const httpServer = http.createServer(async (req, res) => {
   if (req.url !== "/mcp") {
     res.writeHead(404).end("Not found");
     return;
   }
+
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
   res.on("close", () => transport.close());
+
   const server = createServer();
   await server.connect(transport);
   await transport.handleRequest(req, res);
 });
 
-httpServer.listen(3000, () => {
-  console.log("Main MCP server running at http://localhost:3000/mcp");
+httpServer.listen(PORT, () => {
+  console.log(`MCP server running at http://localhost:${PORT}/mcp`);
 });

@@ -372,7 +372,7 @@ function fileIconClass(path) {
   text-overflow: ellipsis;
 }
 
-/* Code panel — adapts to VitePress light/dark theme */
+/* Code panel - adapts to VitePress light/dark theme */
 .code-panel {
   flex: 1;
   display: flex;
