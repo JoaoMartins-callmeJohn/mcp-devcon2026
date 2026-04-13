@@ -4,7 +4,7 @@ _Connecting Your MCP Server to the Outside World_
 
 ## Where We Left Off
 
-In the previous chapter you built a **self-running MCP server** (`server.js`) with two tools, `add` and `greet`, and connected VS Code Copilot to it as the MCP host. Both tools were self-contained: they computed everything locally.
+In the previous chapter you built a **self-running MCP server** (`server.js`) with two tools, `add` and `greet`, and connected VS Code Copilot to it as the MCP client. Both tools were self-contained: they computed everything locally.
 
 In this chapter we go further: your server's tools will call **external APIs and other MCP servers**, turning your server into a hub that bridges Copilot to the outside world.
 
@@ -87,6 +87,8 @@ Two API calls, zero extra packages - both Open-Meteo endpoints are free with no 
 
 Start the server (`node server.js`), then open the Command Palette and run **MCP: List Servers → Restart**. Then open Copilot Chat in **Agent mode** and ask:
 
-> "What's the weather in Amsterdam?"
+```
+What's the weather in Amsterdam?
+```
 
 Copilot calls your `get_weather` tool and returns the result.

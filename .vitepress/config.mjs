@@ -63,7 +63,7 @@ export default defineConfig({
       { text: "Source Code", link: "/code-states" },
       {
         text: "Download Slides",
-        link: withBase("MCP_Devcon%2014-04-2026.pdf"),
+        link: withBase("Workshop%20MCP%20Devcon%2014-04-2026.pdf"),
         target: "_blank",
       },
     ],

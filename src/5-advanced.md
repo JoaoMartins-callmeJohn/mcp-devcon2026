@@ -27,7 +27,7 @@ devcon-workshop/
 └── server.js
 ```
 
-## Part 1 - Build client.js
+## Build client.js
 
 `client.js` is a standalone script that connects directly to your MCP servers and calls tools programmatically, without VS Code or Copilot. Just like VS Code Copilot connects to multiple servers via `mcp.json`, your client connects to both `server.js` and `aps-server.js` over HTTP. This is useful for scripting, testing, and as the base for building `agent.js`.
 
@@ -101,6 +101,8 @@ allTools.forEach((tool) => {
 
 ### Section 3 - Call every tool from the workshop
 
+> **Bucket names must be globally unique** and contain only lowercase letters, numbers, and dashes. Replace the example names below with your own unique names.
+
 ```javascript
 // Chapter 01 - add
 const addResult = await workshopClient.callTool({
@@ -163,7 +165,7 @@ node client.js
 
 ---
 
-## Part 2 - Get a Free Gemini API Key
+## Get a Free Gemini API Key
 
 Gemini's free tier is available through Google AI Studio. No credit card required, just a Google account.
 
@@ -180,7 +182,7 @@ GEMINI_API_KEY="your-key-here"
 
 > The Gemini 2.5 Flash (`gemini-2.5-flash`) free tier gives you 5 requests per minute and 20 requests per day, more than enough for this workshop.
 
-## Part 3 - Install the Gemini SDK
+## Install the Gemini SDK
 
 ```bash
 npm install @google/genai
@@ -188,7 +190,7 @@ npm install @google/genai
 
 > 🔗 [npmjs.com/package/@google/genai](https://www.npmjs.com/package/@google/genai) - Google's official JS/TS SDK for Gemini. Supports function calling and has experimental native MCP support.
 
-## Part 4 - Build agent.js
+## Build agent.js
 
 Create a new file called `agent.js`. This replaces the hardcoded `callTool()` calls in `client.js` with a natural language loop driven by Gemini.
 
@@ -336,9 +338,11 @@ The loop works like a conversation:
 
 ### Section 4 - Ask Questions in Natural Language
 
+> **Bucket names must be globally unique.** Replace `devcon-test2` with a unique name using only lowercase letters, numbers, and dashes.
+
 ```javascript
 await ask(
-  "Create a new OSS bucket called 'devcon-test' with a persistent policy in the US region, then list my US buckets to confirm it was created.",
+  "Create a new OSS bucket called 'devcon-test2' with a persistent policy in the US region, then list my US buckets to confirm it was created.",
 );
 
 await workshopClient.close();
@@ -349,7 +353,7 @@ Gemini reads the descriptions of all tools your server exposes and picks the rig
 
 [View complete `agent.js` in Source Code →](/code-states#state-6:agent.js)
 
-## Part 5 - Run the Agent
+### Run the Agent
 
 ```bash
 # Terminal 1
@@ -403,7 +407,7 @@ await new Promise((resolve) => {
 });
 ```
 
-Replace the hardcoded `ask()` calls with this loop and you have a working AI assistant backed by your entire MCP system.
+Replace the hardcoded `ask()` call with this loop and you have a working AI assistant backed by your entire MCP system.
 
 [View complete solution `agent.js` in Source Code →](/code-states#state-7:agent.js)
 

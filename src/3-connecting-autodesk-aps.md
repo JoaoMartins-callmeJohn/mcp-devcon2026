@@ -8,13 +8,13 @@ Autodesk has been actively investing in MCP. Here is the landscape as of 2026:
 
 | What                                      | Where                                                                                                                              | Status                 |
 | ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| Official APS MCP server (Node.js)         | [github.com/autodesk-platform-services/aps-mcp-server-nodejs](https://github.com/autodesk-platform-services/aps-mcp-server-nodejs) | Public, experimental   |
+| Sample APS MCP server (Node.js)           | [github.com/autodesk-platform-services/aps-mcp-server-nodejs](https://github.com/autodesk-platform-services/aps-mcp-server-nodejs) | Public, experimental   |
 | Official AEC Data Model MCP server (.NET) | [github.com/autodesk-platform-services/aps-aecdm-mcp-dotnet](https://github.com/autodesk-platform-services/aps-aecdm-mcp-dotnet)   | Public, experimental   |
 | Autodesk-hosted MCP servers (enterprise)  | [autodesk.com/solutions/autodesk-ai/autodesk-mcp-servers](https://www.autodesk.com/solutions/autodesk-ai/autodesk-mcp-servers)     | Announced, coming soon |
 
-The official Node.js server exposes tools for navigating **Autodesk Construction Cloud (ACC)**: listing projects, browsing issues, accessing documents. It uses **Secure Service Accounts (SSA)** and is designed as a **stdio subprocess** for tools like Claude Desktop and Cursor.
+The official Node.js server exposes tools for navigating **Autodesk Forma (ex AutodeskConstruction Cloud)**: listing projects, browsing issues, accessing documents. It uses **Secure Service Accounts (SSA)** and is designed as a **stdio subprocess** for tools like Claude Desktop and Cursor.
 
-That architecture doesn't fit what we've been building. Our system is HTTP-first. More importantly, ACC data (projects, issues, folders) requires **3-legged authentication**. The user must log in, because ACC resources are user-scoped, not app-scoped. We cover that in [Chapter 4](./4-three-legged-aps.md).
+That architecture doesn't fit what we've been building. Our system is HTTP-first. More importantly, Forma data (projects, issues, folders) requires **3-legged authentication**. The user must log in, because Forma resources are user-scoped, not app-scoped. We cover that in [Chapter 4](./4-three-legged-aps.md).
 
 **In this chapter** we focus on what **2-legged (app-to-service) tokens can do**: **OSS (Object Storage Service)**, the file storage layer of APS. With a 2-legged token you can create buckets, list them, and manage objects. No user login needed, and it works on the free tier.
 
@@ -25,7 +25,7 @@ VS Code Copilot → server.js     :3000 → Open-Meteo API
                → aps-server.js  :3001 → APS API (OSS)
 ```
 
-## Part 1 - Set Up Credentials
+## Set Up Credentials
 
 ### Store your credentials
 
@@ -69,7 +69,7 @@ npm install @aps_sdk/autodesk-sdkmanager @aps_sdk/authentication @aps_sdk/oss
 | [`@aps_sdk/authentication`](https://www.npmjs.com/package/@aps_sdk/authentication)           | 2-legged and 3-legged OAuth tokens             |
 | [`@aps_sdk/oss`](https://www.npmjs.com/package/@aps_sdk/oss)                                 | Object Storage Service (buckets and objects)   |
 
-## Part 2 - Build the APS MCP Server
+## Build the APS MCP Server
 
 Create `aps-server.js`. This server handles authentication automatically - it fetches a 2-legged access token on startup and refreshes it when needed. It then exposes APS capabilities as MCP tools.
 
@@ -143,7 +143,7 @@ async function getToken() {
 
 Every tool handler calls `getToken()` before making an API request. If the token is still valid it is returned from cache; if it has expired a new one is fetched transparently.
 
-To pass the token to SDK clients, wrap it in a `StaticAuthenticationProvider`:
+To pass the token to SDK clients, wrap it in a `StaticAuthenticationProvider`. Add this **directly after the `getToken()` function**:
 
 ```javascript
 // Helper factory: creates a fresh OSS client with the current token
@@ -156,11 +156,13 @@ async function getOssClient() {
 
 ### Section 2 - Tool: list your OSS buckets
 
-OSS (Object Storage Service) is where APS stores files before and after translation. This tool lists all buckets belonging to your application. Using `OssClient` from the SDK, there are no manual URLs or `Authorization` headers:
+OSS (Object Storage Service) is where applications store raw design files. Translation results are stored by the Model Derivative service. This tool lists all buckets belonging to your application. Using `OssClient` from the SDK, there are no manual URLs or `Authorization` headers.
 
 We'll register one tool here:
 
 - **`list_buckets`**: takes a `region` and returns all OSS buckets belonging to your APS application in that region, showing each bucket's key, retention policy, and creation date.
+
+Add this **below `getOssClient()`**, at the top level of the file. This creates the `createServer()` factory with the first tool registered inside it:
 
 ```javascript
 function createServer() {
@@ -220,6 +222,8 @@ The `policyKey` controls retention:
 | `temporary`  | 30 days    |
 | `persistent` | Indefinite |
 
+Add this **inside `createServer()`**, right after the `list_buckets` tool registration (replace the `// see Section 3` comment):
+
 ```javascript
 server.registerTool(
   "create_bucket",
@@ -266,7 +270,9 @@ server.registerTool(
 
 ### Section 4 - Create the HTTP server and start on port 3001
 
-Because each `McpServer` instance can only handle one active transport, we use the `createServer()` factory pattern, a fresh server (and transport) per HTTP request:
+Because each `McpServer` instance can only handle one active transport, we use the `createServer()` factory pattern, a fresh server (and transport) per HTTP request.
+
+Add this **at the bottom of `aps-server.js`**, after the `createServer()` function:
 
 ```javascript
 const httpServer = http.createServer(async (req, res) => {
@@ -292,7 +298,7 @@ httpServer.listen(3001, () => {
 
 [View complete `aps-server.js` in Source Code →](/code-states#state-4:aps-server.js)
 
-## Part 3 - Connect VS Code Copilot to the APS Server
+## Connect VS Code Copilot to the APS Server
 
 Instead of routing APS calls through `server.js`, you connect VS Code Copilot **directly** to `aps-server.js` as a second MCP server. This is MCP's one-to-many model: one client, multiple servers, all tools available in one place.
 
@@ -317,7 +323,7 @@ That's it. VS Code Copilot now connects to both servers on startup and merges th
 
 [View complete `server.js` in Source Code →](/code-states#state-4:server.js)
 
-## Part 4 - Run Everything
+## Run Everything
 
 Start the servers:
 
@@ -333,19 +339,27 @@ Run **MCP: List Servers → Start** in the Command Palette for both servers.
 
 With both servers running, open Copilot Chat in **Agent** mode and ask:
 
-> "What OSS buckets do I have in the US region of my APS account?"
+```
+What OSS buckets do I have in the US region of my APS account?
+```
 
-> "Create a new OSS bucket called `devcon-workshop-test` with a persistent policy in the EMEA region."
+```
+Create a new OSS bucket called `devcon-workshop-test` with a persistent policy in the EMEA region.
+```
 
-> "List my buckets in the EMEA region again to confirm it was created."
+```
+List my buckets in the EMEA region again to confirm it was created.
+```
+
+> **Bucket names must be globally unique** and contain only lowercase letters, numbers, and dashes. If `devcon-workshop-test` is already taken, use a different name (e.g. append your initials: `devcon-workshop-test-abc`).
 
 On the last two prompts, watch Copilot call `create_bucket` then `list_buckets` automatically. You wrote zero orchestration code. Copilot figured out which server to call and how to combine the results.
 
 ## Further Reading
 
-The **2-legged token** used here is limited to app-owned resources, OSS is one of them. ACC projects, issues, and user data are user-scoped and require a **3-legged token** where the actual user logs in. That is covered in [Chapter 4](./4-three-legged-aps.md).
+The **2-legged token** used here is limited to app-owned resources, OSS is one of them. Forma projects, issues, and user data are user-scoped and require a **3-legged token** where the actual user logs in. That is covered in [Chapter 4](./4-three-legged-aps.md).
 
-Autodesk's official `aps-mcp-server-nodejs` uses **Secure Service Accounts (SSA)** for fine-grained per-user ACC access. It is built on stdio and designed for Claude Desktop, VS Code or Cursor rather than the HTTP-first system we built here. Explore it at [github.com/autodesk-platform-services/aps-mcp-server-nodejs](https://github.com/autodesk-platform-services/aps-mcp-server-nodejs) after the workshop.
+Autodesk's sample `aps-mcp-server-nodejs` uses **Secure Service Accounts (SSA)** for fine-grained per-user Forma access. It is built on stdio and designed for Claude Desktop, VS Code or Cursor rather than the HTTP-first system we built here. Explore it at [github.com/autodesk-platform-services/aps-mcp-server-nodejs](https://github.com/autodesk-platform-services/aps-mcp-server-nodejs) after the workshop.
 
 ## The Full Architecture
 
@@ -363,3 +377,5 @@ Autodesk's official `aps-mcp-server-nodejs` uses **Secure Service Accounts (SSA)
 ```
 
 VS Code Copilot connects to both servers directly. Each server is independent. Copilot sees one unified set of tools and decides how to combine them, that's the **one-to-many** model.
+
+> **Tip:** MCP tool responses can also include `structuredContent` alongside the `content` array. This is useful for returning richer, machine-readable data (e.g., JSON objects) that clients can display differently from the plain text in `content`. We keep things simple with text-only responses in this workshop, but it's good to know the option exists.

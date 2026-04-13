@@ -14,8 +14,8 @@ const STATE_META = [
   },
   {
     id: "state-2",
-    label: "1 - BIM challenge",
-    description: "Adds bim_element tool, connected via VS Code",
+    label: "1 - Cost estimator challenge",
+    description: "Adds estimate_cost tool, connected via VS Code",
     chapter: "1",
   },
   {

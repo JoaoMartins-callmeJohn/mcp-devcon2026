@@ -30,35 +30,35 @@ allTools.forEach((tool) => {
   console.log(`  - ${tool.name}: ${tool.description}`);
 });
 
-// Chapter 01 — add
+// Chapter 01: add
 const addResult = await workshopClient.callTool({
   name: "add",
   arguments: { a: 12, b: 30 },
 });
 console.log("\nadd(12, 30):", addResult.content[0].text);
 
-// Chapter 01 — greet
+// Chapter 01: greet
 const greetResult = await workshopClient.callTool({
   name: "greet",
   arguments: { name: "Nabil", language: "spanish" },
 });
 console.log("greet():", greetResult.content[0].text);
 
-// Chapter 01 — bim_element
-const bimResult = await workshopClient.callTool({
-  name: "bim_element",
-  arguments: { id: "W-001", type: "Wall", material: "Concrete", level: "L1" },
+// Chapter 01: estimate_cost
+const costResult = await workshopClient.callTool({
+  name: "estimate_cost",
+  arguments: { material: "concrete", volume: 25 },
 });
-console.log("bim_element():", bimResult.content[0].text);
+console.log("estimate_cost():", costResult.content[0].text);
 
-// Chapter 02 — get_weather
+// Chapter 02: get_weather
 const weatherResult = await workshopClient.callTool({
   name: "get_weather",
   arguments: { city: "Amsterdam" },
 });
 console.log("get_weather():", weatherResult.content[0].text);
 
-// Chapter 03 — create_bucket then list_buckets (directly on APS server)
+// Chapter 03: create_bucket then list_buckets (directly on APS server)
 const createResult = await apsClient.callTool({
   name: "create_bucket",
   arguments: {

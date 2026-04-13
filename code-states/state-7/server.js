@@ -44,26 +44,32 @@ function createServer() {
     },
   );
 
-  // Tool 3: bim_element
+  // Tool 3: estimate_cost (Ch.01 challenge)
   server.registerTool(
-    "bim_element",
+    "estimate_cost",
     {
-      description: "Returns a formatted summary of a BIM element",
+      description:
+        "Estimates the cost of a building material based on volume. Returns a formatted cost breakdown.",
       inputSchema: {
-        id: z.string().describe("Element ID, e.g. W-001"),
-        type: z.string().describe("Element type, e.g. Wall"),
-        material: z.string().describe("Material, e.g. Concrete"),
-        level: z.string().describe("Level, e.g. L1"),
+        material: z
+          .enum(["concrete", "steel", "timber", "glass"])
+          .describe("Building material"),
+        volume: z.number().describe("Volume in cubic metres"),
       },
     },
-    async ({ id, type, material, level }) => ({
-      content: [
-        {
-          type: "text",
-          text: `[${id}] ${type} | Material: ${material} | Level: ${level}`,
-        },
-      ],
-    }),
+    async ({ material, volume }) => {
+      const rates = { concrete: 150, steel: 950, timber: 400, glass: 1200 };
+      const rate = rates[material];
+      const total = rate * volume;
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Cost estimate: ${volume} m³ of ${material} at $${rate}/m³ = $${total.toLocaleString()}`,
+          },
+        ],
+      };
+    },
   );
 
   // Tool 4: get_weather

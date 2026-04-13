@@ -11,7 +11,7 @@ hero:
       link: /prerequisites
     - theme: alt
       text: Download Slides
-      link: ./MCP_Devcon%2014-04-2026.pdf
+      link: ./Workshop%20MCP%20Devcon%2014-04-2026.pdf
       target: _blank
     - theme: alt
       text: YouTube Playlist (Coming Soon)

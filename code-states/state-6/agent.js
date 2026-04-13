@@ -94,7 +94,7 @@ async function ask(userPrompt) {
 
 await ask("What is the weather like in London?");
 await ask(
-  "Create a new OSS bucket called 'devcon-test' with a persistent policy in the US region, then list my US buckets to confirm it was created.",
+  "Create a new OSS bucket called 'devcon-test2' with a persistent policy in the US region, then list my US buckets to confirm it was created.",
 );
 
 await workshopClient.close();

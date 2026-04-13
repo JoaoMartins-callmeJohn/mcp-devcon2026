@@ -35,11 +35,11 @@ After signing in, click the **Developer hubs** button in the top-right corner. I
 
 **3. Get an APS plan**
 
-Click **View options** and sign up for the free tier. No credit card required for the APIs used in this workshop.
+Click **View options** and sign up for the free tier. No consumption charges apply for the APIs used in this workshop.
 
 **4. Create a Developer Hub**
 
-Once you have a plan, create the hub from your Autodesk account:
+Once you have a plan, create the hub from your Autodesk account. You can also follow the [official APS tutorial](https://get-started.aps.autodesk.com/#create-a-developer-hub) for this step.
 
 1. Go to [manage.autodesk.com](https://manage.autodesk.com) and sign in with the same account
 2. Click **Products and Services**, then the **Hubs** tab
@@ -55,10 +55,11 @@ Inside your developer hub:
 1. Go to the **Applications** page
 2. Click **Create application**
 3. Enter a name (e.g. `devcon-workshop`)
-4. Select **Server-to-Server App** for backend services that access APS APIs without user authentication
+4. Select **Traditional Web App**: this app type supports both 2-legged (server-to-server) and 3-legged (user login) OAuth, so you can reuse one app throughout the entire workshop
 5. Click **Create**
-6. Under **API Access**, select the APIs your app needs (at minimum: **Data Management**, **OSS**)
-7. Click **Save changes**
-8. Copy your **Client ID** and **Client Secret** from the app overview and save them. You will need them later to authenticate your MCP server with APS and call its APIs.
+6. Under **General Settings**, find **Callback URLs** and add `http://localhost:3001/auth/callback`. Click **Save changes**.
+7. Under **API Access**, select the APIs your app needs (at minimum: **Data Management**, **OSS**)
+8. Click **Save changes**
+9. Copy your **Client ID** and **Client Secret** from the app overview and save them. You will need them later to authenticate your MCP server with APS and call its APIs.
 
-Keep your **Client ID** and **Client Secret** handy. You'll need them in Chapter 3 when setting up the APS server.
+Keep your **Client ID** and **Client Secret** handy. You'll need them in Chapter 3 when setting up the APS server, and again in Chapter 4 for user authentication.

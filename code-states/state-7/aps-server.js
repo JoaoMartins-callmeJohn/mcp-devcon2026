@@ -12,16 +12,9 @@ if (!APS_CLIENT_ID || !APS_CLIENT_SECRET) {
   throw new Error("Missing APS_CLIENT_ID or APS_CLIENT_SECRET in environment.");
 }
 
-const { APS_USER_CLIENT_ID, APS_USER_CLIENT_SECRET } = process.env;
-if (!APS_USER_CLIENT_ID || !APS_USER_CLIENT_SECRET) {
-  throw new Error(
-    "Missing APS_USER_CLIENT_ID or APS_USER_CLIENT_SECRET in environment.",
-  );
-}
-
 const REDIRECT_URI = "http://localhost:3001/auth/callback";
 
-// User access token — null until the user completes the 3-legged login
+// User access token, null until the user completes the 3-legged login
 let userAccessToken = null;
 
 // --- Auth: 2-legged token with auto-refresh ---
@@ -147,7 +140,7 @@ function createServer() {
       }
 
       const response = await fetch(
-        "https://api.userprofile.autodesk.com/userinfo",
+        "https://developer.api.autodesk.com/userinfo",
         {
           headers: { Authorization: `Bearer ${userAccessToken}` },
         },
@@ -180,7 +173,7 @@ const httpServer = http.createServer(async (req, res) => {
   if (req.url === "/auth/login") {
     const params = new URLSearchParams({
       response_type: "code",
-      client_id: APS_USER_CLIENT_ID,
+      client_id: APS_CLIENT_ID,
       redirect_uri: REDIRECT_URI,
       scope: "data:read",
     });
@@ -201,35 +194,24 @@ const httpServer = http.createServer(async (req, res) => {
       return;
     }
 
-    const tokenRes = await fetch(
-      "https://developer.api.autodesk.com/authentication/v2/token",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({
-          grant_type: "authorization_code",
-          code,
-          client_id: APS_USER_CLIENT_ID,
-          client_secret: APS_USER_CLIENT_SECRET,
-          redirect_uri: REDIRECT_URI,
-        }),
-      },
-    );
-
-    if (!tokenRes.ok) {
-      res.writeHead(500).end(`Token exchange failed: ${tokenRes.status}`);
-      return;
-    }
-
-    const tokenData = await tokenRes.json();
-    userAccessToken = tokenData.access_token;
-    console.log("User authenticated via 3-legged OAuth.");
-
-    res
-      .writeHead(200, { "Content-Type": "text/html" })
-      .end(
-        "<h1>Login successful!</h1><p>Close this tab and return to VS Code.</p>",
+    try {
+      const tokenData = await authClient.getThreeLeggedToken(
+        APS_CLIENT_ID,
+        code,
+        REDIRECT_URI,
+        { clientSecret: APS_CLIENT_SECRET },
       );
+      userAccessToken = tokenData.access_token;
+      console.log("User authenticated via 3-legged OAuth.");
+
+      res
+        .writeHead(200, { "Content-Type": "text/html" })
+        .end(
+          "<h1>Login successful!</h1><p>Close this tab and return to VS Code.</p>",
+        );
+    } catch (err) {
+      res.writeHead(500).end(`Token exchange failed: ${err.message}`);
+    }
     return;
   }
 

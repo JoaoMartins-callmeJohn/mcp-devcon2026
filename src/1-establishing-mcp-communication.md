@@ -2,7 +2,7 @@
 
 _Build an MCP Server in Node.js and connect it to VS Code Copilot_
 
-## Part 1 - Project Setup
+## Project Setup
 
 ### Step 1 - Create your project folder
 
@@ -36,13 +36,15 @@ Open `package.json` and set `"type": "module"`:
 ### Step 4 - Install dependencies
 
 ```bash
-npm install @modelcontextprotocol/sdk zod
+npm install @modelcontextprotocol/sdk@latest zod@latest
 ```
 
 | Package                     | Link                                                                                 | Purpose                                                  |
 | --------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------- |
 | `@modelcontextprotocol/sdk` | [@modelcontextprotocol/sdk](https://www.npmjs.com/package/@modelcontextprotocol/sdk) | Anthropic's official MCP SDK - handles the full protocol |
 | `zod`                       | [zod](https://www.npmjs.com/package/zod)                                             | Schema validation for tool inputs                        |
+
+> **⚠️ Zod compatibility:** If you encounter errors with `import { z } from "zod"`, your environment may need `import { z } from "zod/v4"` instead. This can happen when Zod 4+ is installed. Check the [Zod docs](https://zod.dev) for migration guidance.
 
 Your project folder should now look like this:
 
@@ -53,7 +55,7 @@ devcon-workshop/
 └── package-lock.json
 ```
 
-## Part 2 - Build the MCP Server
+## Build the MCP Server
 
 We start by creating the server. The server is the core of an MCP system. It is responsible for exposing the tools that clients can call, receiving incoming requests, executing the right tool handler, and sending the response back. Everything flows through it.
 
@@ -68,6 +70,8 @@ devcon-workshop/
 ```
 
 ### The Imports - What Each One Does
+
+> **Why Streamable HTTP?** MCP supports three transports: **stdio** (subprocess-based, used by Claude Desktop), **SSE** (Server-Sent Events, legacy), and **Streamable HTTP** (the current standard). We use Streamable HTTP because it works over the network, supports streaming responses, and is the recommended transport for HTTP-first architectures.
 
 ```javascript
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -186,9 +190,11 @@ httpServer.listen(PORT, () => {
 
 [View complete `server.js` in Source Code →](/code-states#state-1:server.js)
 
-## Part 3 - Connect VS Code as Your MCP Host
+## Connect VS Code as Your MCP Client
 
-VS Code with GitHub Copilot can act as an MCP host It connects to your running server, discovers its tools, and lets you call them through natural language. All you need to do is tell VS Code where to find the server.
+VS Code with GitHub Copilot can act as an MCP client. It connects to your running server, discovers its tools, and lets you call them through natural language. All you need to do is tell VS Code where to find the server.
+
+> **Terminology:** In MCP, the **client** (VS Code, Cursor, Claude Desktop) connects to an MCP **server** and calls its tools. Some documentation uses "host" to refer to the application that embeds the client. In practice the terms are used interchangeably.
 
 Create a `.vscode` folder in your project and add `mcp.json`:
 
@@ -220,7 +226,7 @@ devcon-workshop/
 | `type: http`      | Tells VS Code to connect over HTTP                                                    |
 | `url`             | The endpoint VS Code sends MCP requests to, must match where your server is listening |
 
-## Part 4 - Run It
+## Run It
 
 ### Step 1 - Start the server
 
@@ -244,30 +250,43 @@ Open Copilot Chat (`Ctrl+Alt+I` on Windows/Linux, `Cmd+Ctrl+I` on Mac, or click 
 
 To reference your MCP tools explicitly, use the `#` prefix:
 
-> "Use `#add` to add 12 and 30"
+```
+Use `#add` to add 12 and 30
+```
 
-> "Use `#greet` to greet Nabil in Spanish"
+```
+Use `#greet` to greet Nabil in Spanish
+```
 
 You will see a **tool call indicator** appear in the chat. Copilot shows which tool it invoked and the result before writing its final answer. That confirms your server is live and the MCP connection is working.
 
 ## Challenge
 
-Add a third tool to `server.js` called `bim_element` that takes:
+Add a third tool to `server.js` called `estimate_cost` that takes:
 
-- `id` (string) - element ID, e.g. `"W-001"`
-- `type` (string) - e.g. `"Wall"`, `"Door"`, `"Window"`
-- `material` (string)
-- `level` (string)
+- `material` (enum: `"concrete"`, `"steel"`, `"timber"`, `"glass"`) - the building material
+- `volume` (number) - volume in cubic metres
 
-And returns a formatted summary:
+And returns a cost estimate using these hardcoded rates:
+
+| Material   | Rate per m³ |
+| ---------- | ----------- |
+| `concrete` | $150        |
+| `steel`    | $950        |
+| `timber`   | $400        |
+| `glass`    | $1,200      |
+
+Expected output for `estimate_cost({ material: "concrete", volume: 25 })`: Cost estimate: 25 m³ of concrete at $150/m³ = $3,750
+
+Then ask VS Code Copilot:
 
 ```
-[W-001] Wall | Material: Concrete | Level: L1
+Estimate the cost of 25 cubic metres of concrete.
 ```
 
-Then ask VS Code Copilot to describe a BIM element with ID `W-001`, type `Wall`, material `Concrete`, and level `L1`.
+> **Tip:** After adding or modifying tools, you need to restart both the Node.js server (`Ctrl+C` then `node server.js`) and the MCP connection in VS Code. You can restart the connection by opening `.vscode/mcp.json` and clicking the **Restart** button that appears inline above each server entry, or via the Command Palette: **MCP: List Servers → Restart**.
 
-[View complete solution `server.js` (adds `bim_element`) →](/code-states#state-2:server.js)
+[View complete solution `server.js` (adds `estimate_cost`) →](/code-states#state-2:server.js)
 
 ## Quick Reference
 
@@ -277,3 +296,5 @@ Then ask VS Code Copilot to describe a BIM element with ID `W-001`, type `Wall`,
 | VS Code MCP: List Servers → Start            | Connects VS Code Copilot to the **running** server |
 | Copilot Chat → Agent mode                    | Calls tools via natural language                   |
 | `server.registerTool(name, config, handler)` | Registers a new tool on the server                 |
+
+> **Looking for a higher-level API?** This workshop uses the official MCP SDK directly so you understand every layer. If you want less boilerplate, check out [FastMCP (Python)](https://github.com/jlowin/fastmcp) or [FastMCP (TypeScript)](https://github.com/punkpeye/fastmcp) — they wrap the same protocol in ~20-25 lines instead of ~70.
