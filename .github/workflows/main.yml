@@ -1,0 +1,44 @@
+  // Tool 3: get_user_info
+  server.registerTool(
+    "get_user_info",
+    {
+      description:
+        "Returns the Autodesk profile of the currently logged-in user. " +
+        "The user must first authenticate by visiting http://localhost:3001/auth/login in their browser.",
+    },
+    async () => {
+      if (!userAccessToken) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: "Not authenticated. Ask the user to open http://localhost:3001/auth/login in their browser to log in with Autodesk.",
+            },
+          ],
+        };
+      }
+
+      const response = await fetch(
+        "https://api.userprofile.autodesk.com/userinfo",
+        {
+          headers: { Authorization: `Bearer ${userAccessToken}` },
+        },
+      );
+
+      if (!response.ok) {
+        return {
+          content: [{ type: "text", text: `Error: ${response.status}` }],
+        };
+      }
+
+      const user = await response.json();
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Name: ${user.name}\nEmail: ${user.email}\nAutodesk ID: ${user.sub}`,
+          },
+        ],
+      };
+    },
+  );
