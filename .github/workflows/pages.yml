@@ -18,9 +18,6 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    env:
-      # Set this as a repo variable when Pages serves under a subpath, e.g. /docs/
-      VITEPRESS_BASE_PATH: ${{ vars.VITEPRESS_BASE_PATH }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +35,17 @@ jobs:
         run: npm ci
 
       - name: Build VitePress site
-        run: npm run build
+        env:
+          # Optional override. When unset, base path is derived from repo name in CI.
+          VITEPRESS_BASE_PATH: ${{ vars.VITEPRESS_BASE_PATH }}
+        run: |
+          if [ -z "$VITEPRESS_BASE_PATH" ] && [ "$GITHUB_ACTIONS" = "true" ] && [ -n "$GITHUB_REPOSITORY" ]; then
+            repo_name="${GITHUB_REPOSITORY#*/}"
+            export VITEPRESS_BASE_PATH="/${repo_name}/"
+          fi
+
+          echo "Using VITEPRESS_BASE_PATH=${VITEPRESS_BASE_PATH:-/}"
+          npm run build
 
       - name: Verify VitePress output
         run: test -f .vitepress/dist/index.html
